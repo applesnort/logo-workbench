@@ -595,12 +595,20 @@ const fontList = document.getElementById('font-list');
 let committedFont = state.font;
 let fontItems = [];
 
+let fontListObserver = null;
 function renderFontList() {
   fontList.innerHTML = '';
+  if (fontListObserver) fontListObserver.disconnect();
+  // Lazy-load each item's font only when it scrolls into view.
+  fontListObserver = new IntersectionObserver((entries) => {
+    for (const e of entries) if (e.isIntersecting) loadFont(e.target.dataset.font);
+  }, { root: fontList, rootMargin: '100px' });
+
   fontItems = FONTS.map(name => {
     const item = document.createElement('div');
     item.className = 'font-item' + (name === committedFont ? ' active' : '');
     item.textContent = name;
+    item.dataset.font = name;
     item.style.fontFamily = `"${name}", sans-serif`;
     item.addEventListener('mouseenter', () => {
       loadFont(name);
@@ -616,6 +624,7 @@ function renderFontList() {
       render();
     });
     fontList.appendChild(item);
+    fontListObserver.observe(item);
     return item;
   });
 }
@@ -651,8 +660,6 @@ fontTrigger.addEventListener('click', (e) => {
   e.stopPropagation();
   if (fontList.hidden) {
     renderFontList();
-    // Preload visible fonts so list items actually render in their font
-    FONTS.forEach(loadFont);
     openFontList();
   } else {
     revertFontPreview();
