@@ -673,15 +673,17 @@ function exportPNG(snap, filename) {
   }
 
   // Measure words (CSS letter-spacing is not honored by fillText, so measure manually)
+  const t1 = snap.text1 ?? DEFAULTS.text1;
+  const t2 = snap.text2 ?? DEFAULTS.text2;
   ctx.font = applyFont(1);
-  const text1 = isSingle ? getText((snap.text1 || '') + (snap.text2 || '')) : getText(snap.text1 || '');
+  const text1 = isSingle ? getText(t1 + t2) : getText(t1);
   const w1Width = measureTracked(text1, 1) * (snap.width1 / 100);
   const w1Height = snap.size1 * scale * 1.2;
 
   let text2 = '', w2Width = 0, w2Height = 0;
   if (!isSingle) {
     ctx.font = applyFont(2);
-    text2 = getText(snap.text2 || '');
+    text2 = getText(t2);
     w2Width = measureTracked(text2, 2) * (snap.width2 / 100);
     w2Height = snap.size2 * scale * 1.2;
   }
@@ -779,8 +781,10 @@ function saveSnapshot() {
 
 function loadSnapshot(snap) {
   Object.assign(state, snap);
-  document.getElementById('text1').value = state.text1 || '';
-  document.getElementById('text2').value = state.text2 || '';
+  if (state.text1 === undefined) state.text1 = DEFAULTS.text1;
+  if (state.text2 === undefined) state.text2 = DEFAULTS.text2;
+  document.getElementById('text1').value = state.text1;
+  document.getElementById('text2').value = state.text2;
   // Sync all controls
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -843,11 +847,13 @@ function renderSnapshots() {
       return s;
     }
 
+    const st1 = snap.text1 ?? DEFAULTS.text1;
+    const st2 = snap.text2 ?? DEFAULTS.text2;
     if (snap.wordMode === 'one') {
-      inner.appendChild(makeWord((snap.text1 || '') + (snap.text2 || ''), 1));
+      inner.appendChild(makeWord(st1 + st2, 1));
     } else {
-      inner.appendChild(makeWord(snap.text1 || '', 1));
-      inner.appendChild(makeWord(snap.text2 || '', 2));
+      inner.appendChild(makeWord(st1, 1));
+      inner.appendChild(makeWord(st2, 2));
     }
 
     card.appendChild(inner);

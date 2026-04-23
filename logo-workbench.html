@@ -679,6 +679,9 @@ function setupControls() {
   // Reset All
   document.getElementById('reset-all').addEventListener('click', () => {
     Object.keys(SLIDER_DEFAULTS).forEach(resetSlider);
+    // Reset phrase
+    state.phrase = 'Normal View';
+    document.getElementById('phrase').value = 'Normal View';
     // Reset toggles
     state.textCase = 'upper';
     document.querySelectorAll('#case-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.case === 'upper'));
