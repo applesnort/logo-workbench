@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normal View — Logo Explore</title>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111;
+    --panel-bg: #1a1a1a;
+    --text: #f0f0f0;
+    --text-muted: #666;
+    --border: #2a2a2a;
+    --accent: #4f8cff;
+    --control-bg: #222;
+    --control-border: #444;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Preview */
+  .preview {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    padding: 40px 32px;
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .preview-inner {
+    display: flex;
+    gap: 0;
+    align-items: baseline;
+    transition: all 0.2s;
+  }
+  .preview-inner.stacked {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .preview-inner.stacked.align-left { align-items: flex-start; }
+  .preview-inner.stacked.align-right { align-items: flex-end; }
+
+  .preview-word {
+    font-family: 'Audiowide', sans-serif;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+
+  .preview-word.outline {
+    -webkit-text-stroke: 2px currentColor;
+    color: transparent;
+  }
+
+  /* Controls panel */
+  .controls {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    overflow-y: auto;
+  }
+
+  .col {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .col:first-child { border-right: 1px solid var(--border); }
+
+  .col-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .row label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    min-width: 52px;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .row label:hover { color: var(--accent); }
+
+  .row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .row input[type="color"] {
+    width: 28px;
+    height: 24px;
+    border: 1px solid var(--control-border);
+    border-radius: 4px;
+    background: var(--control-bg);
+    cursor: pointer;
+    padding: 1px;
+  }
+
+  .row .value {
+    font-size: 11px;
+    color: var(--text);
+    min-width: 42px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .btn {
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    color: var(--text);
+    padding: 4px 10px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn:hover { background: #333; border-color: #555; }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .btn-group { display: flex; gap: 0; }
+  .btn-group .btn { border-radius: 0; border-right-width: 0; }
+  .btn-group .btn:first-child { border-radius: 5px 0 0 5px; }
+  .btn-group .btn:last-child { border-radius: 0 5px 5px 0; border-right-width: 1px; }
+
+  /* Global bar */
+  .global-bar {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    background: var(--panel-bg);
+  }
+  .global-bar .group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .global-bar label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .global-bar .spacer { flex: 1; }
+  .global-bar .hint {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Snapshots */
+  .snapshots {
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    background: var(--panel-bg);
+    min-height: 60px;
+  }
+  .snapshots-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .snapshot-grid {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .snapshot-card {
+    flex: 0 0 auto;
+    min-width: 180px;
+    max-width: 260px;
+    padding: 16px 14px 10px;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+  }
+  .snapshot-card:hover { border-color: var(--accent); }
+  .snapshot-card .snap-preview {
+    font-family: 'Audiowide', sans-serif;
+    white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .snapshot-card .snap-preview.outline {
+    -webkit-text-stroke: 1.5px currentColor;
+    color: transparent;
+  }
+  .snapshot-card .snap-label {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .snapshot-inner {
+    display: flex;
+    align-items: baseline;
+    gap: 0;
+  }
+  .snapshot-inner.stacked {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="preview" id="preview">
+  <div class="preview-inner" id="preview-inner">
+    <span class="preview-word" id="word1">NORMAL</span>
+    <span class="preview-word" id="word2"> VIEW</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="col" id="col-word1">
+    <div class="col-header">
+      <span>NORMAL</span>
+      <button class="btn" data-reset-col="1">Reset</button>
+    </div>
+    <div class="row">
+      <label data-default="size1">Size</label>
+      <input type="range" data-prop="size1" min="16" max="120" step="1" value="52">
+      <span class="value" data-val="size1">52px</span>
+    </div>
+    <div class="row">
+      <label data-default="tracking1">Track</label>
+      <input type="range" data-prop="tracking1" min="-0.05" max="0.4" step="0.005" value="0.08">
+      <span class="value" data-val="tracking1">0.08em</span>
+    </div>
+    <div class="row">
+      <label data-default="width1">Width</label>
+      <input type="range" data-prop="width1" min="50" max="150" step="1" value="100">
+      <span class="value" data-val="width1">100%</span>
+    </div>
+    <div class="row">
+      <label data-default="opacity1">Opacity</label>
+      <input type="range" data-prop="opacity1" min="0" max="1" step="0.05" value="1">
+      <span class="value" data-val="opacity1">1.00</span>
+    </div>
+    <div class="row">
+      <label data-default="yshift1">Y Shift</label>
+      <input type="range" data-prop="yshift1" min="-30" max="30" step="1" value="0">
+      <span class="value" data-val="yshift1">0px</span>
+    </div>
+    <div class="row">
+      <label>Color</label>
+      <input type="color" data-prop="color1" value="#f0f0f0">
+      <div class="btn-group">
+        <button class="btn active" data-style1="filled">Fill</button>
+        <button class="btn" data-style1="outline">Outline</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="col" id="col-word2">
+    <div class="col-header">
+      <span>VIEW</span>
+      <button class="btn" data-reset-col="2">Reset</button>
+    </div>
+    <div class="row">
+      <label data-default="size2">Size</label>
+      <input type="range" data-prop="size2" min="16" max="120" step="1" value="52">
+      <span class="value" data-val="size2">52px</span>
+    </div>
+    <div class="row">
+      <label data-default="tracking2">Track</label>
+      <input type="range" data-prop="tracking2" min="-0.05" max="0.4" step="0.005" value="0.08">
+      <span class="value" data-val="tracking2">0.08em</span>
+    </div>
+    <div class="row">
+      <label data-default="width2">Width</label>
+      <input type="range" data-prop="width2" min="50" max="150" step="1" value="100">
+      <span class="value" data-val="width2">100%</span>
+    </div>
+    <div class="row">
+      <label data-default="opacity2">Opacity</label>
+      <input type="range" data-prop="opacity2" min="0" max="1" step="0.05" value="1">
+      <span class="value" data-val="opacity2">1.00</span>
+    </div>
+    <div class="row">
+      <label data-default="yshift2">Y Shift</label>
+      <input type="range" data-prop="yshift2" min="-30" max="30" step="1" value="0">
+      <span class="value" data-val="yshift2">0px</span>
+    </div>
+    <div class="row">
+      <label>Color</label>
+      <input type="color" data-prop="color2" value="#f0f0f0">
+      <div class="btn-group">
+        <button class="btn active" data-style2="filled">Fill</button>
+        <button class="btn" data-style2="outline">Outline</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="global-bar">
+  <div class="group">
+    <label>Layout</label>
+    <div class="btn-group" id="layout-toggle">
+      <button class="btn active" data-layout="inline">Inline</button>
+      <button class="btn" data-layout="stacked">Stack</button>
+    </div>
+  </div>
+  <div class="group">
+    <label>Align</label>
+    <div class="btn-group" id="align-toggle">
+      <button class="btn" data-align="left">L</button>
+      <button class="btn active" data-align="center">C</button>
+      <button class="btn" data-align="right">R</button>
+    </div>
+  </div>
+  <div class="group">
+    <label>Case</label>
+    <div class="btn-group" id="case-toggle">
+      <button class="btn active" data-case="upper">UPPER</button>
+      <button class="btn" data-case="title">Title</button>
+      <button class="btn" data-case="lower">lower</button>
+    </div>
+  </div>
+  <div class="group">
+    <div class="btn-group" id="word-toggle">
+      <button class="btn" data-word="one">Single</button>
+      <button class="btn active" data-word="two">Split</button>
+    </div>
+  </div>
+  <div class="group">
+    <label>Gap</label>
+    <input type="range" id="word-gap" min="-10" max="40" step="1" value="8" style="width:80px;accent-color:var(--accent)">
+    <span class="value" id="word-gap-val" style="font-size:11px;min-width:32px">8px</span>
+  </div>
+  <div class="group">
+    <label>BG</label>
+    <input type="color" id="bg-color" value="#111111">
+  </div>
+  <div class="spacer"></div>
+  <button class="btn" id="save-snap">Save Snapshot</button>
+  <button class="btn" id="reset-all">Reset All</button>
+  <button class="btn" id="export-current">Export PNG</button>
+  <button class="btn" id="export-all-snaps">Export All</button>
+  <span class="hint">S save &middot; E export &middot; click label reset</span>
+</div>
+
+<div class="snapshots">
+  <div class="snapshots-header">
+    <span>Snapshots</span>
+    <button class="btn" id="clear-snaps">Clear All</button>
+  </div>
+  <div class="snapshot-grid" id="snapshot-grid"></div>
+</div>
+
+<script>
+// --- State ---
+const DEFAULTS = {
+  size1: 52, tracking1: 0.08, width1: 100, opacity1: 1, yshift1: 0, color1: '#f0f0f0', style1: 'filled',
+  size2: 52, tracking2: 0.08, width2: 100, opacity2: 1, yshift2: 0, color2: '#f0f0f0', style2: 'filled',
+  layout: 'inline', align: 'center', textCase: 'upper', wordMode: 'two', wordGap: 8, bgColor: '#111111',
+};
+
+const state = { ...DEFAULTS };
+const snapshots = [];
+
+// --- Render ---
+function formatWord(word) {
+  switch (state.textCase) {
+    case 'upper': return word.toUpperCase();
+    case 'lower': return word.toLowerCase();
+    case 'title': return word;
+    default: return word;
+  }
+}
+
+function render() {
+  const preview = document.getElementById('preview');
+  const inner = document.getElementById('preview-inner');
+  const w1 = document.getElementById('word1');
+  const w2 = document.getElementById('word2');
+
+  preview.style.background = state.bgColor;
+
+  // Text content
+  if (state.wordMode === 'one') {
+    w1.textContent = formatWord('NormalView');
+    w2.textContent = '';
+    w2.style.display = 'none';
+  } else {
+    w1.textContent = formatWord('Normal');
+    w2.textContent = formatWord('View');
+    w2.style.display = '';
+  }
+
+  // Layout
+  inner.className = 'preview-inner';
+  if (state.layout === 'stacked' && state.wordMode === 'two') {
+    inner.classList.add('stacked');
+    inner.classList.add('align-' + state.align);
+    inner.style.gap = state.wordGap + 'px';
+  } else {
+    inner.style.gap = (state.wordMode === 'two' ? state.wordGap + 'px' : '0');
+  }
+
+  // Word 1
+  w1.style.fontSize = state.size1 + 'px';
+  w1.style.letterSpacing = state.tracking1 + 'em';
+  w1.style.transform = `scaleX(${state.width1 / 100}) translateY(${state.yshift1}px)`;
+  w1.style.opacity = state.opacity1;
+  w1.style.color = state.color1;
+  w1.className = 'preview-word' + (state.style1 === 'outline' ? ' outline' : '');
+
+  // Word 2
+  w2.style.fontSize = state.size2 + 'px';
+  w2.style.letterSpacing = state.tracking2 + 'em';
+  w2.style.transform = `scaleX(${state.width2 / 100}) translateY(${state.yshift2}px)`;
+  w2.style.opacity = state.opacity2;
+  w2.style.color = state.color2;
+  w2.className = 'preview-word' + (state.style2 === 'outline' ? ' outline' : '');
+}
+
+// --- Controls ---
+// Sliders
+document.querySelectorAll('input[data-prop]').forEach(input => {
+  const prop = input.dataset.prop;
+  input.addEventListener('input', () => {
+    const val = input.type === 'color' ? input.value : parseFloat(input.value);
+    state[prop] = val;
+    // Update value display
+    const valEl = document.querySelector(`[data-val="${prop}"]`);
+    if (valEl) {
+      if (prop.startsWith('size')) valEl.textContent = val + 'px';
+      else if (prop.startsWith('tracking')) valEl.textContent = val.toFixed(2) + 'em';
+      else if (prop.startsWith('width')) valEl.textContent = val + '%';
+      else if (prop.startsWith('opacity')) valEl.textContent = val.toFixed(2);
+      else if (prop.startsWith('yshift')) valEl.textContent = val + 'px';
+    }
+    render();
+  });
+});
+
+// Label click to reset individual slider
+document.querySelectorAll('label[data-default]').forEach(label => {
+  label.addEventListener('click', () => {
+    const prop = label.dataset.default;
+    const def = DEFAULTS[prop];
+    if (def === undefined) return;
+    state[prop] = def;
+    const input = document.querySelector(`input[data-prop="${prop}"]`);
+    if (input) input.value = def;
+    const valEl = document.querySelector(`[data-val="${prop}"]`);
+    if (valEl) {
+      if (prop.startsWith('size')) valEl.textContent = def + 'px';
+      else if (prop.startsWith('tracking')) valEl.textContent = def.toFixed(2) + 'em';
+      else if (prop.startsWith('width')) valEl.textContent = def + '%';
+      else if (prop.startsWith('opacity')) valEl.textContent = def.toFixed(2);
+      else if (prop.startsWith('yshift')) valEl.textContent = def + 'px';
+    }
+    render();
+  });
+});
+
+// Per-column reset
+document.querySelectorAll('[data-reset-col]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const n = btn.dataset.resetCol;
+    ['size', 'tracking', 'width', 'opacity', 'yshift'].forEach(p => {
+      const prop = p + n;
+      state[prop] = DEFAULTS[prop];
+      const input = document.querySelector(`input[data-prop="${prop}"]`);
+      if (input) input.value = DEFAULTS[prop];
+      const valEl = document.querySelector(`[data-val="${prop}"]`);
+      if (valEl) valEl.click; // trigger via label reset logic
+    });
+    state['color' + n] = DEFAULTS['color' + n];
+    document.querySelector(`input[data-prop="color${n}"]`).value = DEFAULTS['color' + n];
+    state['style' + n] = 'filled';
+    document.querySelectorAll(`[data-style${n}]`).forEach(b => b.classList.toggle('active', b.dataset['style' + n] === 'filled'));
+    // Force update value displays
+    ['size', 'tracking', 'width', 'opacity', 'yshift'].forEach(p => {
+      const prop = p + n;
+      const valEl = document.querySelector(`[data-val="${prop}"]`);
+      const v = DEFAULTS[prop];
+      if (valEl) {
+        if (p === 'size') valEl.textContent = v + 'px';
+        else if (p === 'tracking') valEl.textContent = v.toFixed(2) + 'em';
+        else if (p === 'width') valEl.textContent = v + '%';
+        else if (p === 'opacity') valEl.textContent = v.toFixed(2);
+        else if (p === 'yshift') valEl.textContent = v + 'px';
+      }
+    });
+    render();
+  });
+});
+
+// Style toggles (fill/outline)
+[1, 2].forEach(n => {
+  document.querySelectorAll(`[data-style${n}]`).forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(`[data-style${n}]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state['style' + n] = btn.dataset['style' + n];
+      render();
+    });
+  });
+});
+
+// Button group helpers
+function setupBtnGroup(selector, stateKey, defaultVal) {
+  document.querySelectorAll(selector + ' .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll(selector + ' .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const val = btn.dataset[Object.keys(btn.dataset)[0]];
+      state[stateKey] = val;
+      render();
+    });
+  });
+}
+
+setupBtnGroup('#layout-toggle', 'layout');
+setupBtnGroup('#align-toggle', 'align');
+setupBtnGroup('#case-toggle', 'textCase');
+setupBtnGroup('#word-toggle', 'wordMode');
+
+// Word gap
+const gapInput = document.getElementById('word-gap');
+const gapVal = document.getElementById('word-gap-val');
+gapInput.addEventListener('input', () => {
+  state.wordGap = parseInt(gapInput.value);
+  gapVal.textContent = state.wordGap + 'px';
+  render();
+});
+
+// BG color
+document.getElementById('bg-color').addEventListener('input', (e) => {
+  state.bgColor = e.target.value;
+  render();
+});
+
+// Reset all
+document.getElementById('reset-all').addEventListener('click', () => {
+  Object.assign(state, { ...DEFAULTS });
+  // Sync all inputs
+  document.querySelectorAll('input[data-prop]').forEach(input => {
+    const prop = input.dataset.prop;
+    if (DEFAULTS[prop] !== undefined) input.value = DEFAULTS[prop];
+  });
+  document.getElementById('word-gap').value = DEFAULTS.wordGap;
+  gapVal.textContent = DEFAULTS.wordGap + 'px';
+  document.getElementById('bg-color').value = DEFAULTS.bgColor;
+  // Sync value displays
+  document.querySelectorAll('[data-val]').forEach(el => {
+    const prop = el.dataset.val;
+    const v = DEFAULTS[prop];
+    if (v === undefined) return;
+    if (prop.startsWith('size')) el.textContent = v + 'px';
+    else if (prop.startsWith('tracking')) el.textContent = v.toFixed(2) + 'em';
+    else if (prop.startsWith('width')) el.textContent = v + '%';
+    else if (prop.startsWith('opacity')) el.textContent = v.toFixed(2);
+    else if (prop.startsWith('yshift')) el.textContent = v + 'px';
+  });
+  // Sync button groups
+  document.querySelectorAll('#layout-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.layout === 'inline'));
+  document.querySelectorAll('#align-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.align === 'center'));
+  document.querySelectorAll('#case-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.case === 'upper'));
+  document.querySelectorAll('#word-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.word === 'two'));
+  [1, 2].forEach(n => {
+    document.querySelectorAll(`[data-style${n}]`).forEach(b => b.classList.toggle('active', b.dataset['style' + n] === 'filled'));
+  });
+  render();
+});
+
+// --- localStorage ---
+const STORAGE_KEY = 'nv-logo-snapshots';
+
+function persistSnapshots() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshots)); } catch {}
+}
+
+function loadPersistedSnapshots() {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (data) {
+      const parsed = JSON.parse(data);
+      if (Array.isArray(parsed)) snapshots.push(...parsed);
+    }
+  } catch {}
+}
+
+// --- PNG Export ---
+function exportPNG(snap, filename) {
+  const scale = 3; // 3x for crisp output
+  const padding = 60;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Measure text to size the canvas
+  function applyFont(n) {
+    const size = snap['size' + n] * scale;
+    return `${size}px Audiowide`;
+  }
+
+  function getText(word) {
+    if (snap.textCase === 'upper') return word.toUpperCase();
+    if (snap.textCase === 'lower') return word.toLowerCase();
+    return word;
+  }
+
+  const isSingle = snap.wordMode === 'one';
+  const isStacked = snap.layout === 'stacked' && !isSingle;
+
+  // Measure words
+  ctx.font = applyFont(1);
+  const text1 = isSingle ? getText('NormalView') : getText('Normal');
+  const m1 = ctx.measureText(text1);
+  const w1Width = m1.width * (snap.width1 / 100);
+  const w1Height = snap.size1 * scale * 1.2;
+
+  let text2 = '', w2Width = 0, w2Height = 0;
+  if (!isSingle) {
+    ctx.font = applyFont(2);
+    text2 = getText('View');
+    const m2 = ctx.measureText(text2);
+    w2Width = m2.width * (snap.width2 / 100);
+    w2Height = snap.size2 * scale * 1.2;
+  }
+
+  const gap = snap.wordGap * scale;
+
+  if (isStacked) {
+    canvas.width = Math.max(w1Width, w2Width) + padding * 2;
+    canvas.height = w1Height + gap + w2Height + padding * 2;
+  } else if (!isSingle) {
+    canvas.width = w1Width + gap + w2Width + padding * 2;
+    canvas.height = Math.max(w1Height, w2Height) + padding * 2;
+  } else {
+    canvas.width = w1Width + padding * 2;
+    canvas.height = w1Height + padding * 2;
+  }
+
+  // Background
+  ctx.fillStyle = snap.bgColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  function drawWord(text, n, x, y) {
+    const size = snap['size' + n] * scale;
+    ctx.font = `${size}px Audiowide`;
+    ctx.globalAlpha = snap['opacity' + n];
+    const scaleX = snap['width' + n] / 100;
+    const yOff = snap['yshift' + n] * scale;
+
+    ctx.save();
+    ctx.translate(x, y + yOff);
+    ctx.scale(scaleX, 1);
+
+    if (snap['style' + n] === 'outline') {
+      ctx.strokeStyle = snap['color' + n];
+      ctx.lineWidth = 2 * scale;
+      ctx.strokeText(text, 0, 0);
+    } else {
+      ctx.fillStyle = snap['color' + n];
+      ctx.fillText(text, 0, 0);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.textBaseline = 'middle';
+
+  if (isStacked) {
+    const centerX = canvas.width / 2;
+    let alignX1, alignX2;
+    if (snap.align === 'left') {
+      alignX1 = padding;
+      alignX2 = padding;
+    } else if (snap.align === 'right') {
+      alignX1 = canvas.width - padding - w1Width;
+      alignX2 = canvas.width - padding - w2Width;
+    } else {
+      alignX1 = centerX - w1Width / 2;
+      alignX2 = centerX - w2Width / 2;
+    }
+    drawWord(text1, 1, alignX1, padding + w1Height / 2);
+    drawWord(text2, 2, alignX2, padding + w1Height + gap + w2Height / 2);
+  } else if (!isSingle) {
+    const totalW = w1Width + gap + w2Width;
+    const startX = (canvas.width - totalW) / 2;
+    const centerY = canvas.height / 2;
+    drawWord(text1, 1, startX, centerY);
+    drawWord(text2, 2, startX + w1Width + gap, centerY);
+  } else {
+    drawWord(text1, 1, padding, canvas.height / 2);
+  }
+
+  // Download
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// --- Snapshots ---
+function saveSnapshot() {
+  const snap = { ...state, id: Date.now() };
+  snapshots.push(snap);
+  persistSnapshots();
+  renderSnapshots();
+}
+
+function loadSnapshot(snap) {
+  Object.assign(state, snap);
+  // Sync all controls
+  document.querySelectorAll('input[data-prop]').forEach(input => {
+    const prop = input.dataset.prop;
+    if (state[prop] !== undefined) input.value = state[prop];
+  });
+  document.getElementById('word-gap').value = state.wordGap;
+  gapVal.textContent = state.wordGap + 'px';
+  document.getElementById('bg-color').value = state.bgColor;
+  document.querySelectorAll('[data-val]').forEach(el => {
+    const prop = el.dataset.val;
+    const v = state[prop];
+    if (v === undefined) return;
+    if (prop.startsWith('size')) el.textContent = v + 'px';
+    else if (prop.startsWith('tracking')) el.textContent = v.toFixed(2) + 'em';
+    else if (prop.startsWith('width')) el.textContent = v + '%';
+    else if (prop.startsWith('opacity')) el.textContent = v.toFixed(2);
+    else if (prop.startsWith('yshift')) el.textContent = v + 'px';
+  });
+  document.querySelectorAll('#layout-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.layout === state.layout));
+  document.querySelectorAll('#align-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.align === state.align));
+  document.querySelectorAll('#case-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.case === state.textCase));
+  document.querySelectorAll('#word-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.word === state.wordMode));
+  [1, 2].forEach(n => {
+    document.querySelectorAll(`[data-style${n}]`).forEach(b => b.classList.toggle('active', b.dataset['style' + n] === state['style' + n]));
+  });
+  render();
+}
+
+function deleteSnapshot(id) {
+  const idx = snapshots.findIndex(s => s.id === id);
+  if (idx >= 0) snapshots.splice(idx, 1);
+  persistSnapshots();
+  renderSnapshots();
+}
+
+function renderSnapshots() {
+  const grid = document.getElementById('snapshot-grid');
+  grid.innerHTML = '';
+  snapshots.forEach((snap, i) => {
+    const card = document.createElement('div');
+    card.className = 'snapshot-card';
+    card.style.background = snap.bgColor;
+
+    const inner = document.createElement('div');
+    inner.className = 'snapshot-inner' + (snap.layout === 'stacked' && snap.wordMode === 'two' ? ' stacked' : '');
+    inner.style.gap = (snap.layout === 'stacked' || snap.wordMode === 'two') ? (snap.wordGap * 0.4) + 'px' : '0';
+
+    function makeWord(text, n) {
+      const s = document.createElement('span');
+      s.className = 'snap-preview' + (snap['style' + n] === 'outline' ? ' outline' : '');
+      let t = text;
+      if (snap.textCase === 'upper') t = t.toUpperCase();
+      else if (snap.textCase === 'lower') t = t.toLowerCase();
+      s.textContent = t;
+      s.style.fontSize = (snap['size' + n] * 0.35) + 'px';
+      s.style.letterSpacing = snap['tracking' + n] + 'em';
+      s.style.opacity = snap['opacity' + n];
+      s.style.color = snap['color' + n];
+      s.style.transform = `scaleX(${snap['width' + n] / 100})`;
+      return s;
+    }
+
+    if (snap.wordMode === 'one') {
+      inner.appendChild(makeWord('NormalView', 1));
+    } else {
+      inner.appendChild(makeWord('Normal', 1));
+      inner.appendChild(makeWord('View', 2));
+    }
+
+    card.appendChild(inner);
+
+    const label = document.createElement('div');
+    label.className = 'snap-label';
+    label.textContent = '#' + (i + 1);
+    card.appendChild(label);
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'position:absolute;top:4px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s';
+    card.onmouseenter = () => actions.style.opacity = 1;
+    card.onmouseleave = () => actions.style.opacity = 0;
+
+    const exp = document.createElement('button');
+    exp.style.cssText = 'background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px 4px';
+    exp.textContent = '\u2B07';
+    exp.title = 'Export PNG';
+    exp.onclick = (e) => { e.stopPropagation(); exportPNG(snap, `normalview-${i + 1}.png`); };
+
+    const del = document.createElement('button');
+    del.style.cssText = 'background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px 4px';
+    del.textContent = '\u00d7';
+    del.title = 'Delete';
+    del.onclick = (e) => { e.stopPropagation(); deleteSnapshot(snap.id); };
+    del.onmouseenter = () => del.style.color = '#f66';
+    del.onmouseleave = () => del.style.color = '';
+
+    actions.appendChild(exp);
+    actions.appendChild(del);
+    card.appendChild(actions);
+
+    card.onclick = () => loadSnapshot(snap);
+    grid.appendChild(card);
+  });
+}
+
+document.getElementById('save-snap').addEventListener('click', saveSnapshot);
+document.getElementById('clear-snaps').addEventListener('click', () => {
+  snapshots.length = 0;
+  persistSnapshots();
+  renderSnapshots();
+});
+
+// Export current preview
+document.getElementById('export-current').addEventListener('click', () => {
+  exportPNG(state, `normalview-current.png`);
+});
+
+// Export all snapshots
+document.getElementById('export-all-snaps').addEventListener('click', () => {
+  snapshots.forEach((snap, i) => {
+    setTimeout(() => exportPNG(snap, `normalview-${i + 1}.png`), i * 200);
+  });
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.code === 'KeyS') {
+    e.preventDefault();
+    saveSnapshot();
+  }
+  if (e.code === 'KeyE') {
+    e.preventDefault();
+    exportPNG(state, `normalview-current.png`);
+  }
+});
+
+// Init — load persisted snapshots, then render
+loadPersistedSnapshots();
+renderSnapshots();
+render();
+</script>
+
+</body>
+</html>

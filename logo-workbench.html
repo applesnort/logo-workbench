@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normal View — Font Workbench</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #111;
+    --card-bg: #1a1a1a;
+    --text: #f0f0f0;
+    --text-muted: #777;
+    --border: #333;
+    --accent: #4f8cff;
+    --locked-border: #4f8cff;
+    --hover-bg: #222;
+    --control-bg: #222;
+    --control-border: #444;
+    --columns: 4;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(17, 17, 17, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .toolbar .group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .toolbar label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .toolbar label.resettable {
+    cursor: pointer;
+    border-bottom: 1px dotted var(--text-muted);
+  }
+  .toolbar label.resettable:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .toolbar input[type="range"] {
+    width: 100px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .toolbar .value {
+    font-size: 12px;
+    color: var(--text);
+    min-width: 38px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .btn {
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    color: var(--text);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .btn:hover { background: #333; border-color: #555; }
+  .btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .btn-group {
+    display: flex;
+    gap: 0;
+  }
+  .btn-group .btn {
+    border-radius: 0;
+    border-right-width: 0;
+  }
+  .btn-group .btn:first-child { border-radius: 6px 0 0 6px; }
+  .btn-group .btn:last-child { border-radius: 0 6px 6px 0; border-right-width: 1px; }
+
+  .spacer { flex: 1; }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+  }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--columns), 1fr);
+    gap: 16px;
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 32px 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+    position: relative;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    background: var(--hover-bg);
+    transform: translateY(-1px);
+  }
+
+  .card.locked {
+    border-color: var(--locked-border);
+  }
+
+  .card .lock-icon {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card.locked .lock-icon { opacity: 1; }
+
+  .card .wordmark {
+    text-align: center;
+    line-height: 1.2;
+    word-break: break-word;
+    transition: opacity 0.25s;
+  }
+
+  .card .font-name {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 14px;
+    text-align: center;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    transition: opacity 0.2s;
+  }
+
+  .card .font-name.hidden { opacity: 0; pointer-events: none; }
+
+  /* Shuffle animation */
+  .card.shuffling .wordmark {
+    opacity: 0;
+  }
+
+  /* Background variants */
+  body.bg-white { --bg: #f5f5f5; --card-bg: #fff; --text: #111; --text-muted: #888; --border: #ddd; --hover-bg: #f0f0f0; --control-bg: #e8e8e8; --control-border: #ccc; }
+  body.bg-white .toolbar { background: rgba(245, 245, 245, 0.92); }
+
+  body.bg-darkgray { --bg: #1a1a1a; --card-bg: #242424; --text: #f0f0f0; --text-muted: #777; --border: #333; --hover-bg: #2a2a2a; --control-bg: #2a2a2a; --control-border: #444; }
+  body.bg-darkgray .toolbar { background: rgba(26, 26, 26, 0.92); }
+
+  @media (max-width: 900px) {
+    .toolbar { padding: 10px 16px; gap: 10px; }
+    .grid { padding: 16px; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="group">
+    <label>Case</label>
+    <div class="btn-group" id="case-toggle">
+      <button class="btn active" data-case="upper">UPPER</button>
+      <button class="btn" data-case="title">Title</button>
+      <button class="btn" data-case="lower">lower</button>
+      <button class="btn" data-case="smallcaps">SmCaps</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="spacing">Tracking</label>
+    <input type="range" id="spacing" min="-0.05" max="0.3" step="0.005" value="0.05">
+    <span class="value" id="spacing-val">0.05em</span>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="word-spacing">Word</label>
+    <input type="range" id="word-spacing" min="-0.2" max="1" step="0.05" value="0">
+    <span class="value" id="word-spacing-val">0em</span>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="weight">Weight</label>
+    <input type="range" id="weight" min="100" max="900" step="100" value="400">
+    <span class="value" id="weight-val">400</span>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="font-size">Size</label>
+    <input type="range" id="font-size" min="20" max="72" step="1" value="36">
+    <span class="value" id="size-val">36px</span>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="stretch">Width</label>
+    <input type="range" id="stretch" min="50" max="150" step="1" value="100">
+    <span class="value" id="stretch-val">100%</span>
+  </div>
+
+  <div class="group">
+    <label class="resettable" data-reset="line-height">Leading</label>
+    <input type="range" id="line-height" min="0.7" max="2" step="0.05" value="1.2">
+    <span class="value" id="line-height-val">1.2</span>
+  </div>
+
+  <div class="group">
+    <label>BG</label>
+    <div class="btn-group" id="bg-toggle">
+      <button class="btn active" data-bg="dark">Dark</button>
+      <button class="btn" data-bg="darkgray">Gray</button>
+      <button class="btn" data-bg="white">Light</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="btn-group" id="word-toggle">
+      <button class="btn" data-word="one">Single</button>
+      <button class="btn active" data-word="two">Split</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <label>OT</label>
+    <button class="btn active" id="kern-toggle" title="Kerning">Kern</button>
+    <button class="btn" id="liga-toggle" title="Ligatures">Liga</button>
+  </div>
+
+  <div class="group">
+    <label>Names</label>
+    <button class="btn active" id="names-toggle">On</button>
+  </div>
+
+  <div class="group">
+    <label>Cols</label>
+    <div class="btn-group" id="cols-toggle">
+      <button class="btn" data-cols="1">1</button>
+      <button class="btn" data-cols="2">2</button>
+      <button class="btn" data-cols="3">3</button>
+      <button class="btn active" data-cols="4">4</button>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn" id="reset-all">Reset</button>
+  <span class="hint">SPACE shuffle &middot; click lock &middot; ESC unlock &middot; click label reset</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<script>
+const FONT_CATEGORIES = {
+  'Geometric Sans': [
+    'Montserrat', 'Raleway', 'Poppins', 'Quicksand', 'Nunito',
+    'Josefin Sans', 'DM Sans', 'Plus Jakarta Sans', 'Inter', 'Outfit',
+    'Sora', 'Space Grotesk', 'Urbanist',
+  ],
+  'Serif': [
+    'Playfair Display', 'Cormorant Garamond', 'Libre Baskerville',
+    'DM Serif Display', 'EB Garamond', 'Crimson Pro', 'Bodoni Moda',
+    'Spectral', 'Lora', 'Merriweather',
+  ],
+  'Slab': [
+    'Roboto Slab', 'Bitter', 'Zilla Slab', 'Arvo', 'Fraunces',
+    'Crete Round', 'Alfa Slab One', 'Patua One',
+  ],
+  'Display': [
+    'Bebas Neue', 'Oswald', 'Anton', 'Archivo Black', 'Righteous',
+    'Bungee', 'Syncopate', 'Major Mono Display', 'Fugaz One',
+    'Russo One', 'Staatliches', 'Teko', 'Chakra Petch', 'Michroma',
+  ],
+  'Mono': [
+    'Space Mono', 'JetBrains Mono', 'Fira Code', 'IBM Plex Mono',
+    'Source Code Pro', 'Courier Prime', 'Red Hat Mono',
+  ],
+  'Rounded/Soft': [
+    'Comfortaa', 'Varela Round', 'Nunito', 'ABeeZee',
+    'Baloo 2', 'Fredoka',
+  ],
+  'Condensed': [
+    'Barlow Condensed', 'Roboto Condensed', 'Oswald', 'Saira Condensed',
+    'Fjalla One', 'Pathway Extreme',
+  ],
+  'Script/Hand': [
+    'Caveat', 'Pacifico', 'Dancing Script', 'Permanent Marker',
+    'Rock Salt', 'Satisfy', 'Sacramento', 'Kalam',
+  ],
+  'Futuristic/Tech': [
+    'Orbitron', 'Audiowide', 'Press Start 2P', 'Silkscreen',
+    'Exo 2', 'Rajdhani', 'Oxanium', 'Bruno Ace',
+  ],
+  'Elegant': [
+    'Cormorant', 'Cinzel', 'Marcellus', 'Forum',
+    'Poiret One', 'Julius Sans One', 'Tenor Sans',
+  ],
+};
+
+const ALL_FONTS = Object.values(FONT_CATEGORIES).flat();
+const CATEGORY_NAMES = Object.keys(FONT_CATEGORIES);
+
+const CARD_COUNT = 8;
+const loadedFonts = new Set();
+
+// State
+const state = {
+  cards: [],           // { font: string, locked: boolean }
+  textCase: 'upper',   // upper | title | lower
+  wordMode: 'two',     // two | one (Normal View vs NormalView)
+  spacing: 0.05,
+  wordSpacing: 0,
+  stretch: 100,
+  lineHeight: 1.2,
+  kern: true,
+  liga: false,
+  weight: 400,
+  fontSize: 36,
+  bg: 'dark',          // dark | darkgray | white
+  showNames: true,
+  columns: 4,
+  hoveredIndex: -1,
+  usedFonts: new Set(),
+};
+
+function loadFont(fontName) {
+  if (loadedFonts.has(fontName)) return;
+  loadedFonts.add(fontName);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName)}:wght@100;200;300;400;500;600;700;800;900&display=swap`;
+  document.head.appendChild(link);
+}
+
+// Pick one font from a specific category, avoiding exclude set
+function pickFromCategory(category, exclude) {
+  const pool = FONT_CATEGORIES[category].filter(f => !exclude.has(f));
+  if (pool.length === 0) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+// Pick N fonts spread across categories
+function pickSpreadFonts(count, exclude) {
+  const result = [];
+  const used = new Set(exclude);
+  // Shuffle category order for variety
+  const cats = [...CATEGORY_NAMES].sort(() => Math.random() - 0.5);
+  // Round-robin across categories
+  let catIdx = 0;
+  while (result.length < count) {
+    const font = pickFromCategory(cats[catIdx % cats.length], used);
+    if (font) {
+      result.push(font);
+      used.add(font);
+    }
+    catIdx++;
+    // Safety: if we've gone through all categories without finding anything, break
+    if (catIdx > count * CATEGORY_NAMES.length) break;
+  }
+  return result;
+}
+
+function formatText() {
+  const base = state.wordMode === 'one' ? 'NormalView' : 'Normal View';
+  switch (state.textCase) {
+    case 'upper': return base.toUpperCase();
+    case 'lower': return base.toLowerCase();
+    case 'smallcaps': return base;
+    case 'title': return base;
+    default: return base;
+  }
+}
+
+function initCards() {
+  state.usedFonts.clear();
+  state.cards = [];
+  const fonts = pickSpreadFonts(CARD_COUNT, state.usedFonts);
+  for (const font of fonts) {
+    state.usedFonts.add(font);
+    state.cards.push({ font, locked: false });
+    loadFont(font);
+  }
+}
+
+function shuffleUnlocked() {
+  // Rebuild usedFonts from locked cards only
+  const lockedFonts = new Set(state.cards.filter(c => c.locked).map(c => c.font));
+  state.usedFonts = new Set(lockedFonts);
+
+  const grid = document.getElementById('grid');
+  const cardEls = grid.children;
+
+  for (let i = 0; i < state.cards.length; i++) {
+    if (state.cards[i].locked) continue;
+    cardEls[i].classList.add('shuffling');
+  }
+
+  // Brief delay for fade-out, then swap fonts
+  setTimeout(() => {
+    const unlocked = state.cards.map((c, i) => c.locked ? null : i).filter(i => i !== null);
+    const newFonts = pickSpreadFonts(unlocked.length, state.usedFonts);
+    for (let j = 0; j < unlocked.length; j++) {
+      const font = newFonts[j];
+      if (!font) continue;
+      state.usedFonts.add(font);
+      state.cards[unlocked[j]].font = font;
+      loadFont(font);
+    }
+    render();
+    // Remove shuffling class after render to trigger fade-in
+    requestAnimationFrame(() => {
+      for (let i = 0; i < state.cards.length; i++) {
+        cardEls[i]?.classList.remove('shuffling');
+      }
+    });
+  }, 120);
+}
+
+function toggleLock(index) {
+  state.cards[index].locked = !state.cards[index].locked;
+  render();
+}
+
+function unlockAll() {
+  state.cards.forEach(c => c.locked = false);
+  render();
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.style.setProperty('--columns', state.columns);
+
+  // Build or update cards
+  while (grid.children.length < CARD_COUNT) {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = '<span class="lock-icon">&#x1f512;</span><div class="wordmark"></div><div class="font-name"></div>';
+    grid.appendChild(el);
+  }
+  while (grid.children.length > CARD_COUNT) {
+    grid.removeChild(grid.lastChild);
+  }
+
+  const text = formatText();
+
+  for (let i = 0; i < CARD_COUNT; i++) {
+    const card = state.cards[i];
+    const el = grid.children[i];
+
+    el.className = 'card' + (card.locked ? ' locked' : '');
+    el.onclick = () => toggleLock(i);
+    el.onmouseenter = () => { state.hoveredIndex = i; };
+    el.onmouseleave = () => { if (state.hoveredIndex === i) state.hoveredIndex = -1; };
+
+    const wordmark = el.querySelector('.wordmark');
+    wordmark.textContent = text;
+    wordmark.style.fontFamily = `"${card.font}", sans-serif`;
+    wordmark.style.fontSize = state.fontSize + 'px';
+    wordmark.style.fontWeight = state.weight;
+    wordmark.style.letterSpacing = state.spacing + 'em';
+    wordmark.style.wordSpacing = state.wordSpacing + 'em';
+    wordmark.style.transform = `scaleX(${state.stretch / 100})`;
+    wordmark.style.lineHeight = state.lineHeight;
+    wordmark.style.fontKerning = state.kern ? 'normal' : 'none';
+    wordmark.style.fontVariantCaps = state.textCase === 'smallcaps' ? 'small-caps' : 'normal';
+    // Build OpenType feature string
+    const features = [];
+    features.push(`"kern" ${state.kern ? 1 : 0}`);
+    features.push(`"liga" ${state.liga ? 1 : 0}`);
+    wordmark.style.fontFeatureSettings = features.join(', ');
+
+    const nameEl = el.querySelector('.font-name');
+    nameEl.textContent = card.font;
+    nameEl.className = 'font-name' + (state.showNames ? '' : ' hidden');
+  }
+}
+
+// --- Controls ---
+function setupControls() {
+  // Case toggle
+  document.querySelectorAll('#case-toggle .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#case-toggle .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.textCase = btn.dataset.case;
+      render();
+    });
+  });
+
+  // Tracking (letter-spacing)
+  const spacingInput = document.getElementById('spacing');
+  const spacingVal = document.getElementById('spacing-val');
+  spacingInput.addEventListener('input', () => {
+    state.spacing = parseFloat(spacingInput.value);
+    spacingVal.textContent = state.spacing.toFixed(2) + 'em';
+    render();
+  });
+
+  // Word spacing
+  const wordSpacingInput = document.getElementById('word-spacing');
+  const wordSpacingVal = document.getElementById('word-spacing-val');
+  wordSpacingInput.addEventListener('input', () => {
+    state.wordSpacing = parseFloat(wordSpacingInput.value);
+    wordSpacingVal.textContent = state.wordSpacing.toFixed(2) + 'em';
+    render();
+  });
+
+  // Weight
+  const weightInput = document.getElementById('weight');
+  const weightVal = document.getElementById('weight-val');
+  weightInput.addEventListener('input', () => {
+    state.weight = parseInt(weightInput.value);
+    weightVal.textContent = state.weight;
+    render();
+  });
+
+  // Font size
+  const sizeInput = document.getElementById('font-size');
+  const sizeVal = document.getElementById('size-val');
+  sizeInput.addEventListener('input', () => {
+    state.fontSize = parseInt(sizeInput.value);
+    sizeVal.textContent = state.fontSize + 'px';
+    render();
+  });
+
+  // Font stretch
+  const stretchInput = document.getElementById('stretch');
+  const stretchVal = document.getElementById('stretch-val');
+  stretchInput.addEventListener('input', () => {
+    state.stretch = parseInt(stretchInput.value);
+    stretchVal.textContent = state.stretch + '%';
+    render();
+  });
+
+  // Line height
+  const lhInput = document.getElementById('line-height');
+  const lhVal = document.getElementById('line-height-val');
+  lhInput.addEventListener('input', () => {
+    state.lineHeight = parseFloat(lhInput.value);
+    lhVal.textContent = state.lineHeight.toFixed(2);
+    render();
+  });
+
+  // BG toggle
+  document.querySelectorAll('#bg-toggle .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#bg-toggle .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.bg = btn.dataset.bg;
+      document.body.className = '';
+      if (state.bg === 'white') document.body.classList.add('bg-white');
+      else if (state.bg === 'darkgray') document.body.classList.add('bg-darkgray');
+      render();
+    });
+  });
+
+  // Names toggle
+  const namesBtn = document.getElementById('names-toggle');
+  namesBtn.addEventListener('click', () => {
+    state.showNames = !state.showNames;
+    namesBtn.textContent = state.showNames ? 'On' : 'Off';
+    namesBtn.classList.toggle('active', state.showNames);
+    render();
+  });
+
+  // OpenType toggles
+  function setupOtToggle(id, stateKey) {
+    const btn = document.getElementById(id);
+    btn.addEventListener('click', () => {
+      state[stateKey] = !state[stateKey];
+      btn.classList.toggle('active', state[stateKey]);
+      render();
+    });
+  }
+  setupOtToggle('kern-toggle', 'kern');
+  setupOtToggle('liga-toggle', 'liga');
+
+  // Word mode toggle
+  document.querySelectorAll('#word-toggle .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#word-toggle .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.wordMode = btn.dataset.word;
+      render();
+    });
+  });
+
+  // Columns toggle
+  document.querySelectorAll('#cols-toggle .btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cols-toggle .btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.columns = parseInt(btn.dataset.cols);
+      render();
+    });
+  });
+
+  // Slider defaults for individual reset
+  const SLIDER_DEFAULTS = {
+    'spacing':      { value: 0.05,  stateKey: 'spacing',     valId: 'spacing-val',      fmt: v => v.toFixed(2) + 'em' },
+    'word-spacing': { value: 0,     stateKey: 'wordSpacing',  valId: 'word-spacing-val', fmt: v => v.toFixed(2) + 'em' },
+    'weight':       { value: 400,   stateKey: 'weight',       valId: 'weight-val',       fmt: v => v },
+    'font-size':    { value: 36,    stateKey: 'fontSize',     valId: 'size-val',         fmt: v => v + 'px' },
+    'stretch':      { value: 100,   stateKey: 'stretch',      valId: 'stretch-val',      fmt: v => v + '%' },
+    'line-height':  { value: 1.2,   stateKey: 'lineHeight',   valId: 'line-height-val',  fmt: v => parseFloat(v).toFixed(2) },
+  };
+
+  function resetSlider(id) {
+    const def = SLIDER_DEFAULTS[id];
+    if (!def) return;
+    const input = document.getElementById(id);
+    input.value = def.value;
+    state[def.stateKey] = def.value;
+    document.getElementById(def.valId).textContent = def.fmt(def.value);
+    render();
+  }
+
+  // Click label to reset that slider
+  document.querySelectorAll('.resettable').forEach(label => {
+    label.addEventListener('click', () => resetSlider(label.dataset.reset));
+  });
+
+  // Reset All
+  document.getElementById('reset-all').addEventListener('click', () => {
+    Object.keys(SLIDER_DEFAULTS).forEach(resetSlider);
+    // Reset toggles
+    state.textCase = 'upper';
+    document.querySelectorAll('#case-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.case === 'upper'));
+    state.wordMode = 'two';
+    document.querySelectorAll('#word-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.word === 'two'));
+    state.kern = true; state.liga = false;
+    document.getElementById('kern-toggle').classList.add('active');
+    document.getElementById('liga-toggle').classList.remove('active');
+    state.bg = 'dark';
+    document.body.className = '';
+    document.querySelectorAll('#bg-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.bg === 'dark'));
+    state.columns = 4;
+    document.querySelectorAll('#cols-toggle .btn').forEach(b => b.classList.toggle('active', b.dataset.cols === '4'));
+    state.showNames = true;
+    const namesBtn = document.getElementById('names-toggle');
+    namesBtn.textContent = 'On';
+    namesBtn.classList.add('active');
+    render();
+  });
+}
+
+// --- Keyboard ---
+document.addEventListener('keydown', (e) => {
+  // Ignore if user is in an input
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    shuffleUnlocked();
+  } else if (e.code === 'Escape') {
+    unlockAll();
+  } else if (e.code === 'KeyL') {
+    if (state.hoveredIndex >= 0 && state.hoveredIndex < CARD_COUNT) {
+      toggleLock(state.hoveredIndex);
+    }
+  }
+});
+
+// --- Init ---
+initCards();
+setupControls();
+render();
+</script>
+
+</body>
+</html>
