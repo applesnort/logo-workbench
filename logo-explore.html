@@ -434,6 +434,10 @@
     <label>BG</label>
     <input type="color" id="bg-color" value="#111111">
   </div>
+  <div class="group">
+    <label>Font</label>
+    <select id="font-select" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:12px"></select>
+  </div>
   <div class="spacer"></div>
   <button class="btn" id="save-snap">Save Snapshot</button>
   <button class="btn" id="reset-all">Reset All</button>
@@ -457,10 +461,35 @@ const DEFAULTS = {
   size2: 52, tracking2: 0.08, width2: 100, opacity2: 1, yshift2: 0, color2: '#f0f0f0', style2: 'filled',
   layout: 'inline', align: 'center', textCase: 'upper', wordMode: 'two', wordGap: 8, bgColor: '#111111',
   text1: 'Normal', text2: 'View',
+  font: 'Audiowide',
 };
 
 const state = { ...DEFAULTS };
 const snapshots = [];
+
+const FONTS = [
+  'Audiowide', 'Orbitron', 'Bebas Neue', 'Oswald', 'Anton', 'Archivo Black',
+  'Righteous', 'Russo One', 'Bungee', 'Staatliches', 'Teko', 'Chakra Petch',
+  'Michroma', 'Syncopate', 'Exo 2', 'Rajdhani', 'Oxanium', 'Bruno Ace',
+  'Montserrat', 'Raleway', 'Poppins', 'Inter', 'Space Grotesk', 'DM Sans',
+  'Outfit', 'Sora', 'Urbanist', 'Plus Jakarta Sans',
+  'Playfair Display', 'Cormorant Garamond', 'DM Serif Display', 'Bodoni Moda',
+  'Fraunces', 'Libre Baskerville', 'EB Garamond', 'Spectral',
+  'Roboto Slab', 'Bitter', 'Alfa Slab One',
+  'Space Mono', 'JetBrains Mono', 'IBM Plex Mono', 'Major Mono Display',
+  'Cinzel', 'Marcellus', 'Forum', 'Poiret One', 'Julius Sans One',
+  'Comfortaa', 'Fredoka', 'Caveat', 'Pacifico', 'Permanent Marker',
+];
+
+const loadedFonts = new Set();
+function loadFont(name) {
+  if (loadedFonts.has(name)) return;
+  loadedFonts.add(name);
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@400;700&display=swap`;
+  document.head.appendChild(link);
+}
 
 // --- Render ---
 function formatWord(word) {
@@ -501,6 +530,11 @@ function render() {
     inner.style.gap = (state.wordMode === 'two' ? state.wordGap + 'px' : '0');
   }
 
+  // Font
+  const fontStack = `"${state.font}", sans-serif`;
+  w1.style.fontFamily = fontStack;
+  w2.style.fontFamily = fontStack;
+
   // Word 1
   w1.style.fontSize = state.size1 + 'px';
   w1.style.letterSpacing = state.tracking1 + 'em';
@@ -523,6 +557,21 @@ function render() {
 ['text1', 'text2'].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener('input', () => { state[id] = el.value; render(); });
+});
+
+// Font selector
+const fontSelect = document.getElementById('font-select');
+FONTS.forEach(name => {
+  const opt = document.createElement('option');
+  opt.value = name; opt.textContent = name;
+  if (name === state.font) opt.selected = true;
+  fontSelect.appendChild(opt);
+});
+loadFont(state.font);
+fontSelect.addEventListener('change', () => {
+  state.font = fontSelect.value;
+  loadFont(state.font);
+  render();
 });
 
 // Sliders
@@ -648,6 +697,8 @@ document.getElementById('reset-all').addEventListener('click', () => {
   Object.assign(state, { ...DEFAULTS });
   document.getElementById('text1').value = DEFAULTS.text1;
   document.getElementById('text2').value = DEFAULTS.text2;
+  fontSelect.value = DEFAULTS.font;
+  loadFont(DEFAULTS.font);
   // Sync all inputs
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -695,10 +746,20 @@ function loadPersistedSnapshots() {
   } catch {}
 }
 
+function isSingleSnap(snap) { return snap.wordMode === 'one'; }
+
 // --- PNG Export ---
-function exportPNG(snap, filename) {
+async function exportPNG(snap, filename) {
   const scale = 3; // 3x for crisp output
   const padding = 60;
+
+  const fontName = snap.font || DEFAULTS.font;
+  loadFont(fontName);
+  // Ensure the Google font is fully loaded before canvas rasterization.
+  try { await document.fonts.load(`${snap.size1 * scale}px "${fontName}"`); } catch {}
+  if (!isSingleSnap(snap)) {
+    try { await document.fonts.load(`${snap.size2 * scale}px "${fontName}"`); } catch {}
+  }
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -706,7 +767,7 @@ function exportPNG(snap, filename) {
   // Measure text to size the canvas
   function applyFont(n) {
     const size = snap['size' + n] * scale;
-    return `${size}px Audiowide`;
+    return `${size}px "${snap.font || DEFAULTS.font}", sans-serif`;
   }
 
   function getText(word) {
@@ -762,7 +823,7 @@ function exportPNG(snap, filename) {
   function drawWord(text, n, x, y) {
     const size = snap['size' + n] * scale;
     const letterSpacing = snap['tracking' + n] * size;
-    ctx.font = `${size}px Audiowide`;
+    ctx.font = `${size}px "${snap.font || DEFAULTS.font}", sans-serif`;
     ctx.globalAlpha = snap['opacity' + n];
     const scaleX = snap['width' + n] / 100;
     const yOff = snap['yshift' + n] * scale;
@@ -837,8 +898,11 @@ function loadSnapshot(snap) {
   Object.assign(state, snap);
   if (!('text1' in snap)) state.text1 = DEFAULTS.text1;
   if (!('text2' in snap)) state.text2 = DEFAULTS.text2;
+  if (!('font' in snap)) state.font = DEFAULTS.font;
   document.getElementById('text1').value = state.text1;
   document.getElementById('text2').value = state.text2;
+  fontSelect.value = state.font;
+  loadFont(state.font);
   // Sync all controls
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -889,6 +953,7 @@ function renderSnapshots() {
     function makeWord(text, n) {
       const s = document.createElement('span');
       s.className = 'snap-preview' + (snap['style' + n] === 'outline' ? ' outline' : '');
+      s.style.fontFamily = `"${snap.font || DEFAULTS.font}", sans-serif`;
       let t = text;
       if (snap.textCase === 'upper') t = t.toUpperCase();
       else if (snap.textCase === 'lower') t = t.toLowerCase();
@@ -979,6 +1044,7 @@ document.addEventListener('keydown', (e) => {
 
 // Init — load persisted snapshots, then render
 loadPersistedSnapshots();
+snapshots.forEach(s => { if (s.font) loadFont(s.font); });
 renderSnapshots();
 render();
 </script>
