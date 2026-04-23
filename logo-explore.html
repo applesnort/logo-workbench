@@ -93,6 +93,13 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
+  }
+  .col-header input[type="text"] {
+    text-transform: none;
+    letter-spacing: normal;
+    min-width: 0;
+    flex: 1;
   }
 
   .row {
@@ -248,6 +255,14 @@
     align-items: center;
     gap: 0;
   }
+
+  /* Narrow viewports: stack the two per-word control columns */
+  @media (max-width: 720px) {
+    .controls { grid-template-columns: 1fr; }
+    .col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+    .global-bar { padding: 10px 12px; gap: 8px; }
+    .preview { padding: 24px 16px; min-height: 180px; }
+  }
 </style>
 </head>
 <body>
@@ -262,7 +277,7 @@
 <div class="controls">
   <div class="col" id="col-word1">
     <div class="col-header">
-      <input type="text" id="text1" value="Normal" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;width:110px">
+      <input type="text" id="text1" value="Normal" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px">
       <button class="btn" data-reset-col="1">Reset</button>
     </div>
     <div class="row">
@@ -302,7 +317,7 @@
 
   <div class="col" id="col-word2">
     <div class="col-header">
-      <input type="text" id="text2" value="View" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;width:110px">
+      <input type="text" id="text2" value="View" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px">
       <button class="btn" data-reset-col="2">Reset</button>
     </div>
     <div class="row">
