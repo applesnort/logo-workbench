@@ -660,7 +660,7 @@ function exportPNG(snap, filename) {
     const letterSpacing = snap['tracking' + n] * size;
     let total = 0;
     for (const ch of text) total += ctx.measureText(ch).width;
-    return total + letterSpacing * text.length;
+    return total + letterSpacing * Math.max(0, text.length - 1);
   }
 
   // Measure words (CSS letter-spacing is not honored by fillText, so measure manually)
