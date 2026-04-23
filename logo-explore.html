@@ -781,8 +781,8 @@ function saveSnapshot() {
 
 function loadSnapshot(snap) {
   Object.assign(state, snap);
-  if (state.text1 === undefined) state.text1 = DEFAULTS.text1;
-  if (state.text2 === undefined) state.text2 = DEFAULTS.text2;
+  if (!('text1' in snap)) state.text1 = DEFAULTS.text1;
+  if (!('text2' in snap)) state.text2 = DEFAULTS.text2;
   document.getElementById('text1').value = state.text1;
   document.getElementById('text2').value = state.text2;
   // Sync all controls
