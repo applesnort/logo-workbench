@@ -407,7 +407,7 @@ function formatText() {
   switch (state.textCase) {
     case 'upper': return base.toUpperCase();
     case 'lower': return base.toLowerCase();
-    case 'smallcaps': return base;
+    case 'smallcaps': return base.toLowerCase();
     case 'title': return base;
     default: return base;
   }

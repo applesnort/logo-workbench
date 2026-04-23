@@ -655,19 +655,25 @@ function exportPNG(snap, filename) {
   const isSingle = snap.wordMode === 'one';
   const isStacked = snap.layout === 'stacked' && !isSingle;
 
-  // Measure words
+  function measureTracked(text, n) {
+    const size = snap['size' + n] * scale;
+    const letterSpacing = snap['tracking' + n] * size;
+    let total = 0;
+    for (const ch of text) total += ctx.measureText(ch).width;
+    return total + letterSpacing * text.length;
+  }
+
+  // Measure words (CSS letter-spacing is not honored by fillText, so measure manually)
   ctx.font = applyFont(1);
   const text1 = isSingle ? getText('NormalView') : getText('Normal');
-  const m1 = ctx.measureText(text1);
-  const w1Width = m1.width * (snap.width1 / 100);
+  const w1Width = measureTracked(text1, 1) * (snap.width1 / 100);
   const w1Height = snap.size1 * scale * 1.2;
 
   let text2 = '', w2Width = 0, w2Height = 0;
   if (!isSingle) {
     ctx.font = applyFont(2);
     text2 = getText('View');
-    const m2 = ctx.measureText(text2);
-    w2Width = m2.width * (snap.width2 / 100);
+    w2Width = measureTracked(text2, 2) * (snap.width2 / 100);
     w2Height = snap.size2 * scale * 1.2;
   }
 
@@ -690,23 +696,32 @@ function exportPNG(snap, filename) {
 
   function drawWord(text, n, x, y) {
     const size = snap['size' + n] * scale;
+    const letterSpacing = snap['tracking' + n] * size;
     ctx.font = `${size}px Audiowide`;
     ctx.globalAlpha = snap['opacity' + n];
     const scaleX = snap['width' + n] / 100;
     const yOff = snap['yshift' + n] * scale;
+    const isOutline = snap['style' + n] === 'outline';
 
     ctx.save();
     ctx.translate(x, y + yOff);
     ctx.scale(scaleX, 1);
 
-    if (snap['style' + n] === 'outline') {
+    if (isOutline) {
       ctx.strokeStyle = snap['color' + n];
       ctx.lineWidth = 2 * scale;
-      ctx.strokeText(text, 0, 0);
     } else {
       ctx.fillStyle = snap['color' + n];
-      ctx.fillText(text, 0, 0);
     }
+
+    // Draw char-by-char to honor letter-spacing (fillText ignores CSS tracking)
+    let xPos = 0;
+    for (const ch of text) {
+      if (isOutline) ctx.strokeText(ch, xPos, 0);
+      else ctx.fillText(ch, xPos, 0);
+      xPos += ctx.measureText(ch).width + letterSpacing;
+    }
+
     ctx.restore();
     ctx.globalAlpha = 1;
   }
