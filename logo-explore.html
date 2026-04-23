@@ -295,6 +295,32 @@
     gap: 0;
   }
 
+  /* Font picker */
+  .font-picker { position: relative; }
+  .font-list {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0;
+    min-width: 180px;
+    max-height: 320px;
+    overflow-y: auto;
+    background: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    padding: 4px 0;
+  }
+  .font-item {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .font-item:hover,
+  .font-item.active { background: var(--accent); color: #fff; }
+
   /* Narrow viewports: stack the two per-word control columns */
   @media (max-width: 720px) {
     .controls { grid-template-columns: 1fr; }
@@ -436,7 +462,10 @@
   </div>
   <div class="group">
     <label>Font</label>
-    <select id="font-select" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:4px 8px;border-radius:5px;font-size:12px"></select>
+    <div class="font-picker" id="font-picker">
+      <button type="button" class="btn" id="font-trigger" style="min-width:140px;text-align:left">Audiowide</button>
+      <div class="font-list" id="font-list" hidden></div>
+    </div>
   </div>
   <div class="spacer"></div>
   <button class="btn" id="save-snap">Save Snapshot</button>
@@ -479,7 +508,7 @@ const FONTS = [
   'Space Mono', 'JetBrains Mono', 'IBM Plex Mono', 'Major Mono Display',
   'Cinzel', 'Marcellus', 'Forum', 'Poiret One', 'Julius Sans One',
   'Comfortaa', 'Fredoka', 'Caveat', 'Pacifico', 'Permanent Marker',
-];
+].sort((a, b) => a.localeCompare(b));
 
 const loadedFonts = new Set();
 function loadFont(name) {
@@ -559,20 +588,85 @@ function render() {
   el.addEventListener('input', () => { state[id] = el.value; render(); });
 });
 
-// Font selector
-const fontSelect = document.getElementById('font-select');
-FONTS.forEach(name => {
-  const opt = document.createElement('option');
-  opt.value = name; opt.textContent = name;
-  if (name === state.font) opt.selected = true;
-  fontSelect.appendChild(opt);
-});
-loadFont(state.font);
-fontSelect.addEventListener('change', () => {
-  state.font = fontSelect.value;
-  loadFont(state.font);
+// Font picker (custom dropdown — live-previews on hover)
+const fontPicker = document.getElementById('font-picker');
+const fontTrigger = document.getElementById('font-trigger');
+const fontList = document.getElementById('font-list');
+let committedFont = state.font;
+let fontItems = [];
+
+function renderFontList() {
+  fontList.innerHTML = '';
+  fontItems = FONTS.map(name => {
+    const item = document.createElement('div');
+    item.className = 'font-item' + (name === committedFont ? ' active' : '');
+    item.textContent = name;
+    item.style.fontFamily = `"${name}", sans-serif`;
+    item.addEventListener('mouseenter', () => {
+      loadFont(name);
+      state.font = name;
+      render();
+    });
+    item.addEventListener('click', () => {
+      committedFont = name;
+      state.font = name;
+      loadFont(name);
+      fontTrigger.textContent = name;
+      closeFontList();
+      render();
+    });
+    fontList.appendChild(item);
+    return item;
+  });
+}
+
+function openFontList() {
+  fontList.hidden = false;
+  fontList.addEventListener('mouseleave', revertFontPreview);
+  setTimeout(() => document.addEventListener('click', onDocClick), 0);
+  // Scroll active into view
+  const active = fontList.querySelector('.font-item.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+function closeFontList() {
+  fontList.hidden = true;
+  fontList.removeEventListener('mouseleave', revertFontPreview);
+  document.removeEventListener('click', onDocClick);
+}
+
+function revertFontPreview() {
+  state.font = committedFont;
   render();
+}
+
+function onDocClick(e) {
+  if (!fontPicker.contains(e.target)) {
+    revertFontPreview();
+    closeFontList();
+  }
+}
+
+fontTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (fontList.hidden) {
+    renderFontList();
+    // Preload visible fonts so list items actually render in their font
+    FONTS.forEach(loadFont);
+    openFontList();
+  } else {
+    revertFontPreview();
+    closeFontList();
+  }
 });
+
+fontTrigger.textContent = state.font;
+loadFont(state.font);
+
+function syncFontTrigger() {
+  committedFont = state.font;
+  fontTrigger.textContent = state.font;
+}
 
 // Sliders
 document.querySelectorAll('input[data-prop]').forEach(input => {
@@ -697,8 +791,8 @@ document.getElementById('reset-all').addEventListener('click', () => {
   Object.assign(state, { ...DEFAULTS });
   document.getElementById('text1').value = DEFAULTS.text1;
   document.getElementById('text2').value = DEFAULTS.text2;
-  fontSelect.value = DEFAULTS.font;
   loadFont(DEFAULTS.font);
+  syncFontTrigger();
   // Sync all inputs
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -901,8 +995,8 @@ function loadSnapshot(snap) {
   if (!('font' in snap)) state.font = DEFAULTS.font;
   document.getElementById('text1').value = state.text1;
   document.getElementById('text2').value = state.text2;
-  fontSelect.value = state.font;
   loadFont(state.font);
+  syncFontTrigger();
   // Sync all controls
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
