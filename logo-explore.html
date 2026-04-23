@@ -262,7 +262,7 @@
 <div class="controls">
   <div class="col" id="col-word1">
     <div class="col-header">
-      <span>NORMAL</span>
+      <input type="text" id="text1" value="Normal" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;width:110px">
       <button class="btn" data-reset-col="1">Reset</button>
     </div>
     <div class="row">
@@ -302,7 +302,7 @@
 
   <div class="col" id="col-word2">
     <div class="col-header">
-      <span>VIEW</span>
+      <input type="text" id="text2" value="View" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:3px 6px;border-radius:4px;font-size:11px;width:110px">
       <button class="btn" data-reset-col="2">Reset</button>
     </div>
     <div class="row">
@@ -402,6 +402,7 @@ const DEFAULTS = {
   size1: 52, tracking1: 0.08, width1: 100, opacity1: 1, yshift1: 0, color1: '#f0f0f0', style1: 'filled',
   size2: 52, tracking2: 0.08, width2: 100, opacity2: 1, yshift2: 0, color2: '#f0f0f0', style2: 'filled',
   layout: 'inline', align: 'center', textCase: 'upper', wordMode: 'two', wordGap: 8, bgColor: '#111111',
+  text1: 'Normal', text2: 'View',
 };
 
 const state = { ...DEFAULTS };
@@ -427,12 +428,12 @@ function render() {
 
   // Text content
   if (state.wordMode === 'one') {
-    w1.textContent = formatWord('NormalView');
+    w1.textContent = formatWord((state.text1 || '') + (state.text2 || ''));
     w2.textContent = '';
     w2.style.display = 'none';
   } else {
-    w1.textContent = formatWord('Normal');
-    w2.textContent = formatWord('View');
+    w1.textContent = formatWord(state.text1 || '');
+    w2.textContent = formatWord(state.text2 || '');
     w2.style.display = '';
   }
 
@@ -464,6 +465,12 @@ function render() {
 }
 
 // --- Controls ---
+// Text inputs
+['text1', 'text2'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => { state[id] = el.value; render(); });
+});
+
 // Sliders
 document.querySelectorAll('input[data-prop]').forEach(input => {
   const prop = input.dataset.prop;
@@ -585,6 +592,8 @@ document.getElementById('bg-color').addEventListener('input', (e) => {
 // Reset all
 document.getElementById('reset-all').addEventListener('click', () => {
   Object.assign(state, { ...DEFAULTS });
+  document.getElementById('text1').value = DEFAULTS.text1;
+  document.getElementById('text2').value = DEFAULTS.text2;
   // Sync all inputs
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -665,14 +674,14 @@ function exportPNG(snap, filename) {
 
   // Measure words (CSS letter-spacing is not honored by fillText, so measure manually)
   ctx.font = applyFont(1);
-  const text1 = isSingle ? getText('NormalView') : getText('Normal');
+  const text1 = isSingle ? getText((snap.text1 || '') + (snap.text2 || '')) : getText(snap.text1 || '');
   const w1Width = measureTracked(text1, 1) * (snap.width1 / 100);
   const w1Height = snap.size1 * scale * 1.2;
 
   let text2 = '', w2Width = 0, w2Height = 0;
   if (!isSingle) {
     ctx.font = applyFont(2);
-    text2 = getText('View');
+    text2 = getText(snap.text2 || '');
     w2Width = measureTracked(text2, 2) * (snap.width2 / 100);
     w2Height = snap.size2 * scale * 1.2;
   }
@@ -770,6 +779,8 @@ function saveSnapshot() {
 
 function loadSnapshot(snap) {
   Object.assign(state, snap);
+  document.getElementById('text1').value = state.text1 || '';
+  document.getElementById('text2').value = state.text2 || '';
   // Sync all controls
   document.querySelectorAll('input[data-prop]').forEach(input => {
     const prop = input.dataset.prop;
@@ -833,10 +844,10 @@ function renderSnapshots() {
     }
 
     if (snap.wordMode === 'one') {
-      inner.appendChild(makeWord('NormalView', 1));
+      inner.appendChild(makeWord((snap.text1 || '') + (snap.text2 || ''), 1));
     } else {
-      inner.appendChild(makeWord('Normal', 1));
-      inner.appendChild(makeWord('View', 2));
+      inner.appendChild(makeWord(snap.text1 || '', 1));
+      inner.appendChild(makeWord(snap.text2 || '', 2));
     }
 
     card.appendChild(inner);

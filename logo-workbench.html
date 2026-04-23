@@ -203,6 +203,11 @@
 
 <div class="toolbar">
   <div class="group">
+    <label>Text</label>
+    <input type="text" id="phrase" value="Normal View" style="background:var(--control-bg);border:1px solid var(--control-border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;width:140px">
+  </div>
+
+  <div class="group">
     <label>Case</label>
     <div class="btn-group" id="case-toggle">
       <button class="btn active" data-case="upper">UPPER</button>
@@ -348,6 +353,7 @@ const loadedFonts = new Set();
 // State
 const state = {
   cards: [],           // { font: string, locked: boolean }
+  phrase: 'Normal View',
   textCase: 'upper',   // upper | title | lower
   wordMode: 'two',     // two | one (Normal View vs NormalView)
   spacing: 0.05,
@@ -403,7 +409,8 @@ function pickSpreadFonts(count, exclude) {
 }
 
 function formatText() {
-  const base = state.wordMode === 'one' ? 'NormalView' : 'Normal View';
+  const raw = (state.phrase || '').trim() || 'Normal View';
+  const base = state.wordMode === 'one' ? raw.replace(/\s+/g, '') : raw;
   switch (state.textCase) {
     case 'upper': return base.toUpperCase();
     case 'lower': return base.toLowerCase();
@@ -519,6 +526,13 @@ function render() {
 
 // --- Controls ---
 function setupControls() {
+  // Phrase input
+  const phraseInput = document.getElementById('phrase');
+  phraseInput.addEventListener('input', () => {
+    state.phrase = phraseInput.value;
+    render();
+  });
+
   // Case toggle
   document.querySelectorAll('#case-toggle .btn').forEach(btn => {
     btn.addEventListener('click', () => {
